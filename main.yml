@@ -1,0 +1,64 @@
+---
+- name: "Lamp installation"
+  become: yes
+  hosts: amazon
+  vars_files:
+    - variables.yml
+  tasks:
+
+    - name: "Apache - Installing apache webserver"
+      yum:
+        name: httpd
+        state: present
+      tags:
+        - lamp
+   
+    - name: "Apache - enabling php support"
+      shell: amazon-linux-extras install php7.4 -y
+      tags:
+        - lamp
+
+    - name: "Apache- Creating httpd.conf from httpd.conf.j2 template"
+      template:
+        src: ./httpd.conf.j2
+        dest: /etc/httpd/conf/httpd.conf
+      tags:
+        - lamp
+
+    - name: "Apache - Creating Virtualhost from virtualhost.conf.j2 template"
+      template:
+        src: "./virtualhost.conf.j2"
+        dest: "/etc/httpd/conf.d/{{ httpd_domain }}.conf"
+        owner: "{{httpd_owner}}"
+        group: "{{httpd_group}}"
+      tags:
+        - lamp
+
+    - name: "Apache- Creating document root /var/www/html/{{ httpd_domain }}"
+      file:
+        path: "/var/www/html/{{ httpd_domain }}"
+        state: directory
+        owner: "{{httpd_owner}}"
+        group: "{{httpd_group}}"        
+      tags:
+        - lamp
+        
+    - name: "Apache - Creating sample website pages"
+      copy:
+        src: "{{item}}"
+        dest: "/var/www/html/{{ httpd_domain }}"
+        owner: "{{httpd_owner}}"
+        group: "{{httpd_group}}"
+      with_items:
+        - test.html
+        - test.php
+      tags:
+        - lamp
+
+    - name: "Starting/Restarting apache"
+      service:
+        name: httpd
+        state: restarted
+      tags:
+        - lamp
+
